@@ -27,39 +27,57 @@
 %                                                                             %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\version "2.19.50"
+% Show cent deviation for note (##t)
+\registerOption ji.show.cent ##f
+
+% Show ratio for note (##t)
+\registerOption ji.show.ratio ##f
+
+% Print the fundamental pitch (##f)
+\registerOption ji.show.fundamental ##f
+
+% Print the target pitch (##t)
+\registerOption ji.show.notehead ##t
+
+% Display resulting note with harmonics note head
+\registerOption ji.show.notehead-style #'default
+
+\registerOption ji.conf.use-color ##f
+
+% Maintain the current fundamental and duration, behaviour
+% similar to regular notes. Make them default to LilyPond's
+% note defaults (middle c and quarter note).
+% NOTE: This is completely monophonic as the data is maintained
+% in these global options. Any kind of polyphonic behaviour has
+% yet to be implemented.
+\registerOption ji.state.fundamental #(ly:make-pitch 0 0 0)
+\registerOption ji.state.duration 4
+
+% Define what scale is the base for displaying pitches.
+% Default is the chromatic scale, defined by 2 (whole tone / 2 = semitone).
+% For a quarter tone scale one would set this option to 4
+% NOTE: Anything except 2 is not supported yet.
+\registerOption ji.conf.steps-per-whole-tone 2
+
+% Necessary to use cross staff stems with fundamental/result notation
+\registerOption ji.conf.use-cross-staff ##f
+
+% If cross-staff notation is active this is the name of the upper staff
+% where the target pitch is printed.
+% It is up to the user to create such a staff context and keep it alive.
+\registerOption ji.conf.cross-stuff.upper-name "ji-upper"
+
+useCrossStaff =
+#(define-scheme-function ()()
+   (setOption '(ji conf use-cross-staff) #t)
+   #{
+     \layout {
+       \context {
+         \PianoStaff
+         \consists #Span_stem_engraver
+       }
+     }
+   #})
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Configuration
-
-% Change the fundamental, active for following notes
-jiFundamental =
-#(define-void-function (fund) (ly:pitch?)
-   (setOption '(ji state fundamental) fund))
-
-
-% Map the semitone returned by ratio->step-deviation
-% to a LilyPond pitch definition.
-% This is based on the middle c and has to be transposed later
-% TODO:
-% Make this work with alternative scales as well.
-% That should be based on the option ji.conf.steps-per-whole-tone.
-#(define (steps->pitch semitone)
-   (let
-     ;; two lists defining the 12 steps within the octave
-     ;;       c  cis  d  dis  e  f  fis  g  as   a  bes   b
-    ((steps '(0  0    1  1    2  3  3    4  4    5  6     6))
-     (semis '(0  1/2  0  1/2  0  0  1/2  0  1/2  0  -1/2  0))
-     ;; strip semitons of octave
-     (index (modulo semitone 12)))
-     (ly:make-pitch
-      (floor (/ semitone 12))
-      (list-ref steps index)
-      (list-ref semis index))))
-
-% Local predicate which is necessary to process two optional arguments
-#(define (pitch-or-dur? obj)
-   (or (ly:pitch? obj)
-       (ly:duration? obj)))
 

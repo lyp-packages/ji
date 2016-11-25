@@ -27,59 +27,33 @@
 %                                                                             %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\version "2.19.51"
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Underlying mathematics
 
-% Show cent deviation for note (##t)
-\registerOption ji.show.cent ##f
+% Convert a ratio to a floating point octave representation.
+% A ratio of 2/1 will result in one octave (= 1), 4/1 in two octaves etc.
+% Different representations such as semitones or cents should be calculated
+% from here.
+#(define (oll:ji:ratio->octaves ratio)
+   (/ (log ratio) (log 2)))
 
-% Show ratio for note (##t)
-\registerOption ji.show.ratio ##f
+% Convert a ratio to a floating point step representation.
+% The integer part is the number of semitones above the fundamental,
+% the fractional part is the fraction of a semitone
+#(define (oll:ji:ratio->steps ratio)
+   (* (* 6 (getOption '(ji conf steps-per-whole-tone)))
+     (oll:ji:ratio->octaves ratio)))
 
-% Print the fundamental pitch (##f)
-\registerOption ji.show.fundamental ##f
-
-% Print the target pitch (##t)
-\registerOption ji.show.notehead ##t
-
-% Display resulting note with harmonics note head
-\registerOption ji.show.notehead-style #'default
-
-\registerOption ji.conf.use-color ##f
-
-% Maintain the current fundamental and duration, behaviour
-% similar to regular notes. Make them default to LilyPond's
-% note defaults (middle c and quarter note).
-% NOTE: This is completely monophonic as the data is maintained
-% in these global options. Any kind of polyphonic behaviour has
-% yet to be implemented.
-\registerOption ji.state.fundamental #(ly:make-pitch 0 0 0)
-\registerOption ji.state.duration 4
-
-% Define what scale is the base for displaying pitches.
-% Default is the chromatic scale, defined by 2 (whole tone / 2 = semitone).
-% For a quarter tone scale one would set this option to 4
-% NOTE: Anything except 2 is not supported yet.
-\registerOption ji.conf.steps-per-whole-tone 2
-
-% Necessary to use cross staff stems with fundamental/result notation
-\registerOption ji.conf.use-cross-staff ##f
-
-% If cross-staff notation is active this is the name of the upper staff
-% where the target pitch is printed.
-% It is up to the user to create such a staff context and keep it alive.
-\registerOption ji.conf.cross-stuff.upper-name "ji-upper"
-
-useCrossStaff =
-#(define-scheme-function ()()
-   (setOption '(ji conf use-cross-staff) #t)
-   #{
-     \layout {
-       \context {
-         \PianoStaff
-         \consists #Span_stem_engraver
-       }
-     }
-   #})
-
-
-
+% Convert a ratio and return a pair with
+% - the pitch in semitones
+% - the cent deviation above or below (rounded)
+% Rounds to the nearest semitone and gives the deviation
+% in cents -49 < cent < 49.
+#(define (oll:ji:ratio->step/cent ratio)
+   (let*
+    ((step-cent (oll:ji:ratio->steps ratio))
+     ;; truncate the floating point number to the nearest integer (scale step)
+     (step (inexact->exact (round step-cent)))
+     ;; determine the cent deviation
+     (cent (* 100 (- step-cent step))))
+    (cons step cent)))

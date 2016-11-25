@@ -27,8 +27,6 @@
 %                                                                             %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\version "2.19.51"
-
 % Function to enable cross staff stems with varying noteheads.
 % (Cross staff only works when the horizontal position of the stems is
 %  close enough, which is broken by alternative note heads. The function
@@ -71,10 +69,10 @@ pushNC =
 % intended to make visualization configurable
 %
 % TODO: Make configurable and nicer in general
-#(define (format-cent cent)
+#(define (oll:ji:format-cent cent)
    (format "(~@f)" (round cent)))
 
-#(define (format-ratio ratio)
+#(define (oll:ji:format-ratio ratio)
    (format "(~a/~a)" (car ratio) (cdr ratio)))
 
 
@@ -89,7 +87,7 @@ pushNC =
 %
 % TODO:
 % Make styling and directions configurable
-#(define (ji-legend ratio cent)
+#(define (oll:ji:legend ratio cent)
    (let
     ((artics
       (list
@@ -102,7 +100,7 @@ pushNC =
             (list
              '(font-size . -3.5)
              '(self-alignment-X . -0.25))
-            'text (format-ratio ratio))
+            'text (oll:ji:format-ratio ratio))
            #f)
        ;; Add cent deviation above note
        (if (getOption '(ji show cent))
@@ -113,20 +111,20 @@ pushNC =
             (list
              '(font-size . -3.5)
              '(self-alignment-X . -0.25))
-            'text (format-cent cent))
+            'text (oll:ji:format-cent cent))
            #f)
        )))
     ;; remove empty expressions
     (delq #f artics)))
 
-#(define (cent-color cent)
+#(define (oll:ji:cent-color cent)
    (list 1 0 0)
      )
 
 % Produce a color based on the cent detune.
 % Positive detunes color increasingly red
 % while negative colors produce shades of blue
-#(define (cent->color cent)
+#(define (oll:ji:cent->color cent)
    (let
     ((r (if (> cent 0)
             (sqrt (/ cent 50.0))
@@ -139,7 +137,7 @@ pushNC =
 
 % Generate set of tweaks applying to the JI note
 % Controlled by options
-#(define (ji-tweaks ratio cent)
+#(define (oll:ji:tweaks ratio cent)
    (let
     ((tweaks
       (list
@@ -148,7 +146,7 @@ pushNC =
          (getOption '(ji show notehead-style)))
        (if (getOption '(ji conf use-color))
            (let
-            ((col (cent->color cent)))
+            ((col (oll:ji:cent->color cent)))
             (cons (cons 'NoteHead 'color) col))
            #f)
        ;; If we're on the upper part of a cross staff chord
@@ -169,7 +167,7 @@ pushNC =
 % Produce a NoteEvent with given pitch and duration,
 % to be used in the composition of chords or single notes.
 % tweaks is either a list of tweaks or an empty list
-#(define (ji-produce-note pitch duration tweaks)
+#(define (oll:ji:produce-note pitch duration tweaks)
    (make-music
     'NoteEvent
     'tweaks tweaks
@@ -177,12 +175,12 @@ pushNC =
     'duration duration))
 
 % Return a JI NoteEvent with styling
-#(define (ji-note pitch dur ratio cent)
-   (ji-produce-note pitch dur (ji-tweaks ratio cent)))
+#(define (oll:ji:note pitch dur ratio cent)
+   (oll:ji:produce-note pitch dur (oll:ji:tweaks ratio cent)))
 
 % Return a simple NoteEvent
-#(define (ji-simple-note pitch dur)
-   (ji-produce-note pitch dur '()))
+#(define (oll:ji:simple-note pitch dur)
+   (oll:ji:produce-note pitch dur '()))
 
 % Produce a note in Just Intonation.
 % Returns either a chord (with one or two notes) or
@@ -203,7 +201,7 @@ pushNC =
 
 jiNote =
 #(define-music-function (fund dur ratio)
-   ((pitch-or-dur?) (ly:duration?) fraction?)
+   ((oll:ji:pitch-or-duration?) (ly:duration?) fraction?)
    (if fund
        ;; at least one optional argument has been given
        (if (ly:pitch? fund)
@@ -218,9 +216,9 @@ jiNote =
 
    (let*
     ;; note as pair of semitone-interval and cent deviation
-    ((ji-event (ratio->step/cent (/ (car ratio) (cdr ratio))))
+    ((ji-event (oll:ji:ratio->step/cent (/ (car ratio) (cdr ratio))))
      ;; LilyPond pitch as defined by the ratio
-     (pitch-ratio (steps->pitch (car ji-event)))
+     (pitch-ratio (oll:ji:steps->pitch (car ji-event)))
      ;; LilyPond pitch relative to the current fundamental
      (pitch-effective
       (ly:pitch-transpose
@@ -246,12 +244,12 @@ jiNote =
                        (if (not (getOption '(ji show notehead)))
                            ;; only show the legend with the fundamental
                            ;; when the resulting pitch isn't printed
-                           (ji-legend ratio cent)
+                           (oll:ji:legend ratio cent)
                            (list #f)))
                       (elts
                        `(
                           ;; fundamental pitch
-                          ,(ji-simple-note
+                          ,(oll:ji:simple-note
                             (getOption '(ji state fundamental))
                             (getOption '(ji state duration)))
                           ;; legend or empty list
@@ -275,9 +273,9 @@ jiNote =
                        (let
                         ((elts
                           `(
-                             ,(ji-note pitch-effective
+                             ,(oll:ji:note pitch-effective
                                 (getOption '(ji state duration)) ratio cent)
-                             ,@(ji-legend ratio cent)
+                             ,@(oll:ji:legend ratio cent)
                              )))
                         (delq #f elts)))
                    }
@@ -294,15 +292,15 @@ jiNote =
             `(
                ;; Optionally display fundamental and resulting pitch
                ,(if (getOption '(ji show fundamental))
-                    (ji-simple-note
+                    (oll:ji:simple-note
                      (getOption '(ji state fundamental))
                      (getOption '(ji state duration)))
                     #f)
                ,(if (getOption '(ji show notehead))
-                    (ji-note pitch-effective
+                    (oll:ji:note pitch-effective
                       (getOption '(ji state duration)) ratio cent)
                     #f)
-               ,@(ji-legend ratio cent)
+               ,@(oll:ji:legend ratio cent)
                )))
           (delq #f elts)))
         )))

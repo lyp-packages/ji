@@ -27,35 +27,36 @@
 %                                                                             %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\version "2.19.50"
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Underlying mathematics
+% Configuration
 
-% Convert a ratio to a floating point octave representation.
-% A ratio of 2/1 will result in one octave (= 1), 4/1 in two octaves etc.
-% Different representations such as semitones or cents should be calculated
-% from here.
-#(define (ratio->octaves ratio)
-   (/ (log ratio) (log 2)))
+% Change the fundamental, active for following notes
+jiFundamental =
+#(define-void-function (fund) (ly:pitch?)
+   (setOption '(ji state fundamental) fund))
 
-% Convert a ratio to a floating point step representation.
-% The integer part is the number of semitones above the fundamental,
-% the fractional part is the fraction of a semitone
-#(define (ratio->steps ratio)
-   (* (* 6 (getOption '(ji conf steps-per-whole-tone)))
-     (ratio->octaves ratio)))
 
-% Convert a ratio and return a pair with
-% - the pitch in semitones
-% - the cent deviation above or below (rounded)
-% Rounds to the nearest semitone and gives the deviation
-% in cents -49 < cent < 49.
-#(define (ratio->step/cent ratio)
-   (let*
-    ((step-cent (ratio->steps ratio))
-     ;; truncate the floating point number to the nearest integer (scale step)
-     (step (inexact->exact (round step-cent)))
-     ;; determine the cent deviation
-     (cent (* 100 (- step-cent step))))
-    (cons step cent)))
+% Map the semitone returned by ratio->step-deviation
+% to a LilyPond pitch definition.
+% This is based on the middle c and has to be transposed later
+% TODO:
+% Make this work with alternative scales as well.
+% That should be based on the option ji.conf.steps-per-whole-tone.
+#(define (oll:ji:steps->pitch semitone)
+   (let
+     ;; two lists defining the 12 steps within the octave
+     ;;       c  cis  d  dis  e  f  fis  g  as   a  bes   b
+    ((steps '(0  0    1  1    2  3  3    4  4    5  6     6))
+     (semis '(0  1/2  0  1/2  0  0  1/2  0  1/2  0  -1/2  0))
+     ;; strip semitons of octave
+     (index (modulo semitone 12)))
+     (ly:make-pitch
+      (floor (/ semitone 12))
+      (list-ref steps index)
+      (list-ref semis index))))
+
+% Local predicate which is necessary to process two optional arguments
+#(define (oll:ji:pitch-or-duration? obj)
+   (or (ly:pitch? obj)
+       (ly:duration? obj)))
+
